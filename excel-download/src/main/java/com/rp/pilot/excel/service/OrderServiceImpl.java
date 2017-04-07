@@ -18,8 +18,8 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
-	public void csvDownload(int pageSize) {
-		orderRepository.csvDownload(pageSize);
+	public String csvDownload(int pageSize) {
+		return orderRepository.csvDownload(pageSize);
 	}
 
 }

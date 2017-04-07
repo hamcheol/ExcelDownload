@@ -5,6 +5,6 @@ import com.rp.pilot.excel.model.Order;
 public interface OrderService {
 	public void saveOrder(Order order);
 	
-	public void csvDownload(int pageSize);
+	public String csvDownload(int pageSize);
 
 }

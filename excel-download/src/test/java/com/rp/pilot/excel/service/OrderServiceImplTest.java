@@ -25,12 +25,21 @@ public class OrderServiceImplTest {
 	@Autowired
 	private OrderService orderService;
 	
+	/**
+	 * CSV 파일 생성.
+	 */
 	@Test
-	public void testSelectOrderTotal() {
+	public void testMakeCSVFile() {
+		//전체 ResultSet중에 200건씩 
+		//fetch->임시파일 기록->flush 한다.
 		int pageSize = 200;
 		orderService.csvDownload(pageSize);
 	}
 
+	/**
+	 * 테스트 데이터 생성
+	 * @throws InterruptedException
+	 */
 	@Test
 	public void testDummyOrders() throws InterruptedException {
 		for (int i = 0; i < 2000; i++) {

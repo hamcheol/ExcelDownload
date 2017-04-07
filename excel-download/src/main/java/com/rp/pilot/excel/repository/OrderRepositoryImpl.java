@@ -1,19 +1,15 @@
 package com.rp.pilot.excel.repository;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryStream;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.ibatis.session.ResultContext;
 import org.apache.ibatis.session.ResultHandler;
@@ -29,8 +25,7 @@ import com.rp.pilot.excel.model.Order;
 public class OrderRepositoryImpl implements OrderRepository {
 	private Logger logger = LoggerFactory.getLogger(getClass());
 
-	// private static final String BASE_DIR = "C:\\Temp\\";
-	private static final String BASE_DIR = "/home/hamcheol/temp";
+	private static final String BASE_DIR = "C:\\Temp\\";
 
 	private final String NAMESPACE = "com.rp.pilot.excel.repository.OrderRepositoryImpl.";
 
@@ -48,19 +43,18 @@ public class OrderRepositoryImpl implements OrderRepository {
 	}
 
 	@Override
-	public void csvDownload(int pageSize) {
+	public String csvDownload(int pageSize) {
 		try {
-			final int lastPage = (selectTotalOrderCount() / pageSize) + 1;
 			Path baseDir = Paths.get(BASE_DIR);
 			String uniqueId = Integer.toString(RandomUtils.nextInt(0, 1000));
 			Path tmpDir = Files.createTempDirectory(baseDir, uniqueId);
 
-			logger.info("tmpDir : " + tmpDir);
+			logger.info("tmpDir : " + tmpDir); // 임시 파일 디렉토리
 
 			sqlSession.select(NAMESPACE + "selectTotalOrders", null, new ResultHandler<Order>() {
-				List<String> lines = new ArrayList<>();
-				int idx = 0;
-				int pageNo = 1;
+				List<String> lines = new ArrayList<>(); // 조회데이터 ROWS
+				int idx = 0; // 임시파일의 ROW Index
+				int pageNo = 1; // 임시파일 Index
 
 				@Override
 				public void handleResult(ResultContext<? extends Order> context) {
@@ -70,49 +64,72 @@ public class OrderRepositoryImpl implements OrderRepository {
 					idx++;
 					logger.info("idx: {} count:{}", idx, count);
 
+					// 파일 하나의 ROW사이즈만큼 되면
 					if (idx == pageSize) {
 						pageNo = (count / pageSize) + 1;
+						// 임시파일에 쓰고
 						tempFileWrite(lines, pageNo);
 						idx = 0;
+						// List는 clear한다.
 						lines.clear();
 					}
 				}
 
+				/**
+				 * 임시 파일 쓰기
+				 * 
+				 * @param lines
+				 * @param pageNo
+				 */
 				public void tempFileWrite(List<String> lines, int pageNo) {
 					try {
 						String prefix = "excel_";
 						String suffix = ".tmp";
 						Path tmpfile = Files.createTempFile(tmpDir, prefix, suffix);
-						// FileUtils.writeLines(tmpfile., lines);
 						Files.write(tmpfile, lines);
-						// tmpfile.toFile().deleteOnExit();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
 			});
 
-			tempFileMerge(tmpDir, uniqueId);
-		} catch (IOException e) {
+			return tempFileMerge(tmpDir, uniqueId);
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return null;
 
 	}
 
-	private void tempFileMerge(Path tmpDir, String uniqueId) throws IOException {
-		DirectoryStream<Path> ds = Files.newDirectoryStream(tmpDir);
+	/**
+	 * 조각조각 기록된 임시파일을 파일 하나로 merge한다.
+	 * 
+	 * @param tmpDir
+	 * @param uniqueId
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	private String tempFileMerge(Path tmpDir, String uniqueId) {
+		try (DirectoryStream<Path> ds = Files.newDirectoryStream(tmpDir, "*.tmp")) {			
+			FileChannel mergeFile = FileChannel.open(Paths.get(tmpDir + uniqueId + ".csv"), StandardOpenOption.CREATE,
+					StandardOpenOption.WRITE);
 
-		FileChannel mergeFile = FileChannel.open(Paths.get(tmpDir + uniqueId + ".csv"), StandardOpenOption.CREATE,
-				StandardOpenOption.WRITE);
+			for (Path path : ds) {
+				logger.info(path.toString());
+				FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
 
-		for (Path path : ds) {
-			logger.info(path.toString());
-			FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
-
-			for (long p = 0, l = channel.size(); p < l;) {
-				p += channel.transferTo(p, l - p, mergeFile);
+				for (long p = 0, l = channel.size(); p < l;) {
+					logger.info("p:" + p + " l:" + l);
+					p += channel.transferTo(p, l - p, mergeFile);
+				}
 			}
+
+			return mergeFile.toString();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
 		}
 	}
 }
