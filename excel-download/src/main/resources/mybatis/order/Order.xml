@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rp.pilot.excel.repository.OrderRepositoryImpl">
+	<insert id="insertOrder" parameterType="com.rp.pilot.excel.model.Order">
+		INSERT INTO excel_order (
+			ord_no,
+			mbr_id,
+			data
+		) values (
+			#{ordNo},
+			#{mbrId},
+			#{data}
+		)
+	</insert>
+	
+	<select id="selectOrders" parameterType="com.rp.pilot.excel.model.Order" resultType="com.rp.pilot.excel.model.Order">
+		SELECT
+			ord_no as ordNo,
+			mbr_id as mbrId,
+			data as data
+		FROM excel_order
+		limit #{startRow}, #{pageSize}
+	</select>
+	
+	<select id="selectTotalOrderCount" resultType="int">
+		SELECT
+			count(1)
+		FROM excel_order
+	</select>
+	
+	<select id="selectTotalOrders" parameterType="com.rp.pilot.excel.model.Order" resultType="com.rp.pilot.excel.model.Order">
+		SELECT
+			ord_no as ordNo,
+			mbr_id as mbrId,
+			data as data
+		FROM excel_order
+	</select>
+</mapper>	
